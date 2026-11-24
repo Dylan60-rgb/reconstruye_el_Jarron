@@ -1,0 +1,1618 @@
+<!DOCTYPE html>
+<html lang="es">
+<head>
+  <meta charset="UTF-8" />
+  <meta name="viewport" content="width=device-width, initial-scale=1.0, maximum-scale=1.0, user-scalable=no" />
+  <title>Guardián de los Símbolos</title>
+  <style>
+    :root {
+      --bg-earth: #1a130f;
+      --panel-stone: #2b2019;
+      --panel-border: #6b4d38;
+      --engobe: #f5ecda;
+      --terracotta: #a63822;
+      --manganese: #1c1917;
+      --gold: #f0b34b;
+      --ok: #46b874;
+      --text-light: #faf3e6;
+      --text-muted: #d1bfa7;
+    }
+
+    * {
+      box-sizing: border-box;
+      margin: 0;
+      padding: 0;
+      user-select: none;
+      -webkit-user-select: none;
+      -webkit-touch-callout: none;
+      touch-action: none;
+    }
+
+    html, body {
+      width: 100%;
+      height: 100%;
+      overflow: hidden;
+      background-color: var(--bg-earth);
+      font-family: 'Segoe UI', system-ui, -apple-system, sans-serif;
+      color: var(--text-light);
+    }
+
+    #game-wrapper {
+      position: relative;
+      width: 100%;
+      height: 100%;
+    }
+
+    canvas {
+      display: block;
+      width: 100%;
+      height: 100%;
+    }
+
+    /* HUD Superior */
+    #hud {
+      position: absolute;
+      top: 0;
+      left: 0;
+      width: 100%;
+      padding: 10px 12px 6px;
+      display: flex;
+      flex-direction: column;
+      gap: 7px;
+      pointer-events: none;
+      z-index: 10;
+    }
+
+    .hud-row {
+      display: flex;
+      justify-content: space-between;
+      align-items: center;
+      gap: 6px;
+      flex-wrap: wrap;
+    }
+
+    .hud-group {
+      display: flex;
+      align-items: center;
+      gap: 6px;
+    }
+
+    .badge {
+      background: rgba(33, 24, 18, 0.94);
+      border: 2px solid var(--panel-border);
+      border-radius: 10px;
+      padding: 6px 10px;
+      font-weight: 700;
+      font-size: 0.88rem;
+      display: flex;
+      align-items: center;
+      gap: 5px;
+      box-shadow: 0 3px 8px rgba(0, 0, 0, 0.5);
+    }
+
+    .badge span.val {
+      color: var(--gold);
+    }
+
+    .hud-btn {
+      pointer-events: auto;
+      background: var(--panel-stone);
+      border: 2px solid var(--gold);
+      color: var(--text-light);
+      border-radius: 10px;
+      padding: 6px 11px;
+      font-weight: 800;
+      font-size: 0.86rem;
+      cursor: pointer;
+      box-shadow: 0 3px 8px rgba(0, 0, 0, 0.45);
+      transition: transform 0.1s ease, background 0.15s ease;
+    }
+
+    .hud-btn:active {
+      transform: scale(0.94);
+      background: #423126;
+    }
+
+    .timer-container {
+      width: 100%;
+      height: 12px;
+      background: rgba(15, 10, 8, 0.92);
+      border: 2px solid var(--panel-border);
+      border-radius: 999px;
+      overflow: hidden;
+    }
+
+    #timer-bar {
+      width: 100%;
+      height: 100%;
+      background: linear-gradient(90deg, var(--terracotta), var(--gold));
+      transition: width 0.1s linear;
+    }
+
+    /* Pantallas Modales */
+    .overlay {
+      position: absolute;
+      inset: 0;
+      background: rgba(14, 10, 7, 0.9);
+      backdrop-filter: blur(4px);
+      display: flex;
+      justify-content: center;
+      align-items: center;
+      padding: 16px;
+      z-index: 30;
+      opacity: 1;
+      transition: opacity 0.2s ease;
+    }
+
+    .overlay.hidden {
+      opacity: 0;
+      pointer-events: none;
+    }
+
+    .card {
+      background: linear-gradient(165deg, #33261e 0%, #1f1611 100%);
+      border: 3px solid var(--gold);
+      border-radius: 18px;
+      padding: 22px 18px;
+      max-width: 430px;
+      width: 100%;
+      text-align: center;
+      box-shadow: 0 14px 35px rgba(0, 0, 0, 0.8);
+      display: flex;
+      flex-direction: column;
+      gap: 13px;
+    }
+
+    .card-tag {
+      display: inline-block;
+      align-self: center;
+      background: var(--terracotta);
+      color: var(--engobe);
+      font-size: 0.76rem;
+      font-weight: 800;
+      letter-spacing: 0.8px;
+      text-transform: uppercase;
+      padding: 4px 12px;
+      border-radius: 999px;
+      border: 1px solid var(--gold);
+    }
+
+    .card h1 {
+      font-size: 1.7rem;
+      color: var(--gold);
+      line-height: 1.15;
+    }
+
+    .card h2 {
+      font-size: 1.35rem;
+      color: var(--gold);
+    }
+
+    .card p {
+      font-size: 0.94rem;
+      line-height: 1.45;
+      color: var(--text-light);
+    }
+
+    .steps-box {
+      background: rgba(0, 0, 0, 0.32);
+      border: 1px solid var(--panel-border);
+      border-radius: 12px;
+      padding: 12px;
+      text-align: left;
+      display: flex;
+      flex-direction: column;
+      gap: 8px;
+      font-size: 0.9rem;
+    }
+
+    .step-line {
+      display: flex;
+      align-items: center;
+      gap: 8px;
+    }
+
+    .step-num {
+      background: var(--gold);
+      color: #1c140f;
+      font-weight: 900;
+      width: 22px;
+      height: 22px;
+      border-radius: 50%;
+      display: inline-flex;
+      align-items: center;
+      justify-content: center;
+      font-size: 0.8rem;
+      flex-shrink: 0;
+    }
+
+    .wisdom-box {
+      background: rgba(245, 236, 218, 0.08);
+      border-left: 4px solid var(--terracotta);
+      padding: 11px 13px;
+      border-radius: 8px;
+      text-align: left;
+    }
+
+    .wisdom-box h3 {
+      font-size: 0.95rem;
+      color: var(--gold);
+      margin-bottom: 4px;
+    }
+
+    .wisdom-box p {
+      font-size: 0.88rem;
+      color: var(--text-muted);
+    }
+
+    .stats-row {
+      display: flex;
+      justify-content: space-around;
+      background: rgba(0, 0, 0, 0.32);
+      padding: 10px;
+      border-radius: 10px;
+      border: 1px solid var(--panel-border);
+    }
+
+    .stat-item {
+      display: flex;
+      flex-direction: column;
+      gap: 2px;
+    }
+
+    .stat-label {
+      font-size: 0.72rem;
+      color: var(--text-muted);
+      text-transform: uppercase;
+    }
+
+    .stat-value {
+      font-size: 1.1rem;
+      font-weight: 800;
+      color: var(--gold);
+    }
+
+    .btn-primary {
+      background: linear-gradient(180deg, #bf442c 0%, #8c2b19 100%);
+      color: var(--engobe);
+      border: 2px solid var(--gold);
+      border-radius: 12px;
+      padding: 14px 18px;
+      font-size: 1.04rem;
+      font-weight: 800;
+      cursor: pointer;
+      box-shadow: 0 6px 14px rgba(0, 0, 0, 0.55);
+      transition: transform 0.1s ease, filter 0.15s ease;
+    }
+
+    .btn-primary:active {
+      transform: scale(0.96);
+      filter: brightness(1.12);
+    }
+
+    #mini-preview-canvas {
+      width: 116px;
+      height: 116px;
+      margin: 0 auto;
+      border-radius: 12px;
+      background: rgba(0, 0, 0, 0.35);
+      border: 2px solid var(--panel-border);
+    }
+  </style>
+</head>
+<body>
+  <div id="game-wrapper">
+    <canvas id="gameCanvas"></canvas>
+
+    <!-- HUD Superior -->
+    <div id="hud">
+      <div class="hud-row">
+        <div class="hud-group">
+          <div class="badge">Nivel <span class="val" id="hud-level">1/5</span></div>
+          <div class="badge">Puntos <span class="val" id="hud-score">0</span></div>
+          <div class="badge">Piezas <span class="val" id="hud-pieces">0/4</span></div>
+        </div>
+        <div class="hud-group">
+          <button class="hud-btn" id="btn-hint">💡 Pista</button>
+          <button class="hud-btn" id="btn-sound" aria-label="Sonido">🔊</button>
+        </div>
+      </div>
+      <div class="timer-container">
+        <div id="timer-bar"></div>
+      </div>
+    </div>
+
+    <!-- Pantalla de Inicio -->
+    <div id="start-screen" class="overlay">
+      <div class="card">
+        <span class="card-tag">Cultura Diaguita</span>
+        <h1>Guardián de los Símbolos</h1>
+        <p>Arma las vasijas antiguas uniendo cada pedazo de cerámica en su lugar y posición correctos.</p>
+
+        <div class="steps-box">
+          <div class="step-line">
+            <span class="step-num">1</span>
+            <span><strong>Toca un tiesto</strong> para girarlo 90° hasta que la flecha dorada apunte hacia arriba.</span>
+          </div>
+          <div class="step-line">
+            <span class="step-num">2</span>
+            <span><strong>Arrástralo</strong> hasta su hueco en la vasija (se ilumina al acercarte).</span>
+          </div>
+          <div class="step-line">
+            <span class="step-num">3</span>
+            <span>¡Completá la vasija antes de que se acabe la barra de energía!</span>
+          </div>
+        </div>
+
+        <div class="stats-row">
+          <div class="stat-item">
+            <span class="stat-label">Récord</span>
+            <span class="stat-value" id="start-highscore">0</span>
+          </div>
+          <div class="stat-item">
+            <span class="stat-label">Nivel Máx.</span>
+            <span class="stat-value" id="start-maxlevel">1</span>
+          </div>
+        </div>
+
+        <button class="btn-primary" id="btn-start">EMPEZAR A JUGAR</button>
+      </div>
+    </div>
+
+    <!-- Tarjeta de Sabiduría Histórica -->
+    <div id="victory-screen" class="overlay hidden">
+      <div class="card">
+        <span class="card-tag" id="vic-vessel-type">Vasija Restaurada</span>
+        <h2 id="vic-title">¡Vasija Completa!</h2>
+        <canvas id="mini-preview-canvas" width="140" height="140"></canvas>
+        <div class="wisdom-box">
+          <h3 id="vic-symbol-title">Significado del Símbolo</h3>
+          <p id="vic-symbol-desc">Descripción del símbolo.</p>
+        </div>
+        <div class="stats-row">
+          <div class="stat-item">
+            <span class="stat-label">Bono Tiempo</span>
+            <span class="stat-value" id="vic-time-bonus">+0</span>
+          </div>
+          <div class="stat-item">
+            <span class="stat-label">Puntaje</span>
+            <span class="stat-value" id="vic-total-score">0</span>
+          </div>
+        </div>
+        <button class="btn-primary" id="btn-next-level">SIGUIENTE NIVEL</button>
+      </div>
+    </div>
+
+    <!-- Pantalla de Tiempo Agotado -->
+    <div id="gameover-screen" class="overlay hidden">
+      <div class="card">
+        <span class="card-tag">Tiempo Agotado</span>
+        <h2>Se Acabó la Energía</h2>
+        <p>No te preocupes, volvé a intentarlo y usá las pistas si necesitás ayuda.</p>
+        <div class="stats-row">
+          <div class="stat-item">
+            <span class="stat-label">Puntaje</span>
+            <span class="stat-value" id="go-score">0</span>
+          </div>
+          <div class="stat-item">
+            <span class="stat-label">Récord</span>
+            <span class="stat-value" id="go-highscore">0</span>
+          </div>
+        </div>
+        <button class="btn-primary" id="btn-retry">REINTENTAR</button>
+      </div>
+    </div>
+  </div>
+
+  <script>
+    (() => {
+      // ==========================================
+      // 1. SONIDOS CON WEB AUDIO API
+      // ==========================================
+      class SoundFX {
+        constructor() {
+          this.ctx = null;
+          this.enabled = true;
+        }
+
+        init() {
+          if (!this.ctx) {
+            const AudioCtx = window.AudioContext || window.webkitAudioContext;
+            if (AudioCtx) this.ctx = new AudioCtx();
+          }
+          if (this.ctx && this.ctx.state === 'suspended') {
+            this.ctx.resume();
+          }
+        }
+
+        playRotate() {
+          if (!this.enabled) return;
+          this.init();
+          if (!this.ctx) return;
+          const now = this.ctx.currentTime;
+          const osc = this.ctx.createOscillator();
+          const gain = this.ctx.createGain();
+          osc.type = 'triangle';
+          osc.frequency.setValueAtTime(340, now);
+          osc.frequency.exponentialRampToValueAtTime(540, now + 0.07);
+          gain.gain.setValueAtTime(0.14, now);
+          gain.gain.exponentialRampToValueAtTime(0.001, now + 0.08);
+          osc.connect(gain);
+          gain.connect(this.ctx.destination);
+          osc.start(now);
+          osc.stop(now + 0.08);
+        }
+
+        playPick() {
+          if (!this.enabled) return;
+          this.init();
+          if (!this.ctx) return;
+          const now = this.ctx.currentTime;
+          const osc = this.ctx.createOscillator();
+          const gain = this.ctx.createGain();
+          osc.type = 'sine';
+          osc.frequency.setValueAtTime(220, now);
+          osc.frequency.exponentialRampToValueAtTime(300, now + 0.06);
+          gain.gain.setValueAtTime(0.11, now);
+          gain.gain.exponentialRampToValueAtTime(0.001, now + 0.07);
+          osc.connect(gain);
+          gain.connect(this.ctx.destination);
+          osc.start(now);
+          osc.stop(now + 0.07);
+        }
+
+        playSnap() {
+          if (!this.enabled) return;
+          this.init();
+          if (!this.ctx) return;
+          const now = this.ctx.currentTime;
+          [523.25, 783.99].forEach((freq, idx) => {
+            const osc = this.ctx.createOscillator();
+            const gain = this.ctx.createGain();
+            osc.type = idx === 0 ? 'triangle' : 'sine';
+            osc.frequency.setValueAtTime(freq, now + idx * 0.04);
+            gain.gain.setValueAtTime(0.18, now + idx * 0.04);
+            gain.gain.exponentialRampToValueAtTime(0.001, now + 0.28 + idx * 0.05);
+            osc.connect(gain);
+            gain.connect(this.ctx.destination);
+            osc.start(now + idx * 0.04);
+            osc.stop(now + 0.32 + idx * 0.05);
+          });
+        }
+
+        playVictory() {
+          if (!this.enabled) return;
+          this.init();
+          if (!this.ctx) return;
+          const now = this.ctx.currentTime;
+          [392.00, 440.00, 523.25, 587.33, 783.99].forEach((freq, i) => {
+            const osc = this.ctx.createOscillator();
+            const gain = this.ctx.createGain();
+            osc.type = 'triangle';
+            osc.frequency.setValueAtTime(freq, now + i * 0.09);
+            gain.gain.setValueAtTime(0.18, now + i * 0.09);
+            gain.gain.exponentialRampToValueAtTime(0.001, now + i * 0.09 + 0.42);
+            osc.connect(gain);
+            gain.connect(this.ctx.destination);
+            osc.start(now + i * 0.09);
+            osc.stop(now + i * 0.09 + 0.44);
+          });
+        }
+
+        playGameOver() {
+          if (!this.enabled) return;
+          this.init();
+          if (!this.ctx) return;
+          const now = this.ctx.currentTime;
+          [329.63, 293.66, 261.63, 196.00].forEach((freq, i) => {
+            const osc = this.ctx.createOscillator();
+            const gain = this.ctx.createGain();
+            osc.type = 'sawtooth';
+            osc.frequency.setValueAtTime(freq, now + i * 0.15);
+            gain.gain.setValueAtTime(0.1, now + i * 0.15);
+            gain.gain.exponentialRampToValueAtTime(0.001, now + i * 0.15 + 0.32);
+            osc.connect(gain);
+            gain.connect(this.ctx.destination);
+            osc.start(now + i * 0.15);
+            osc.stop(now + i * 0.15 + 0.34);
+          });
+        }
+      }
+
+      const sfx = new SoundFX();
+
+      // ==========================================
+      // 2. NIVELES Y SIGNIFICADO HISTÓRICO
+      // ==========================================
+      const LEVELS = [
+        {
+          id: 1,
+          name: "Puco Ceremonial",
+          vesselShape: "puco",
+          cols: 2,
+          rows: 2,
+          timeLimit: 75,
+          patternType: "stepped_fret",
+          symbolTitle: "Grecas Escalonadas y el Agua",
+          symbolDesc: "Las grecas escalonadas representan los cerros de los valles y las terrazas por donde baja el agua que da vida a la tierra."
+        },
+        {
+          id: 2,
+          name: "Cuenco de la Lluvia",
+          vesselShape: "puco",
+          cols: 3,
+          rows: 2,
+          timeLimit: 90,
+          patternType: "serpent_zigzag",
+          symbolTitle: "La Serpiente y el Rayo",
+          symbolDesc: "Las líneas en zigzag recuerdan el movimiento de la serpiente y el rayo en el cielo, ligados a la llegada de las lluvias."
+        },
+        {
+          id: 3,
+          name: "Jarro Pato Ritual",
+          vesselShape: "jarro_pato",
+          cols: 3,
+          rows: 2,
+          timeLimit: 95,
+          patternType: "zoomorphic_face",
+          symbolTitle: "Rostros y Aves Sagradas",
+          symbolDesc: "El Jarro Pato une formas de ave y figuras simbólicas usadas en ceremonias rituales de la cultura diaguita."
+        },
+        {
+          id: 4,
+          name: "Vasija de los Valles",
+          vesselShape: "urna",
+          cols: 3,
+          rows: 3,
+          timeLimit: 120,
+          patternType: "diamond_spiral",
+          symbolTitle: "Rombos y Simetría",
+          symbolDesc: "Los rombos y guardas geométricas reflejan el orden, la simetría y los ciclos de la naturaleza en la cerámica ancestral."
+        },
+        {
+          id: 5,
+          name: "Urna del Guardián",
+          vesselShape: "urna",
+          cols: 4,
+          rows: 3,
+          timeLimit: 150,
+          patternType: "master_codex",
+          symbolTitle: "Colores y Símbolos del Valle",
+          symbolDesc: "Combina el blanco crema (engobe), rojo terracota y negro manganeso en una composición completa de gran detalle."
+        }
+      ];
+
+      // ==========================================
+      // 3. DIBUJO PROCEDURAL DE PATRONES DIAGUITAS
+      // ==========================================
+      const PALETTE = {
+        engobe: '#f5ecda',
+        terracotta: '#a63822',
+        manganese: '#1c1917',
+        gold: '#f0b34b',
+        ok: '#46b874'
+      };
+
+      function createVesselTexture(levelConfig, size = 480) {
+        const off = document.createElement('canvas');
+        off.width = size;
+        off.height = size;
+        const ctx = off.getContext('2d');
+
+        ctx.fillStyle = PALETTE.engobe;
+        ctx.fillRect(0, 0, size, size);
+
+        // Textura suave de arcilla
+        for (let i = 0; i < 800; i++) {
+          ctx.fillStyle = i % 2 === 0 ? 'rgba(166, 56, 34, 0.04)' : 'rgba(28, 25, 23, 0.05)';
+          ctx.fillRect(Math.random() * size, Math.random() * size, 2, 2);
+        }
+
+        const cols = levelConfig.cols;
+        const rows = levelConfig.rows;
+        const cw = size / cols;
+        const ch = size / rows;
+
+        ctx.strokeStyle = PALETTE.manganese;
+        ctx.lineWidth = Math.max(5, size * 0.012);
+        ctx.strokeRect(5, 5, size - 10, size - 10);
+
+        const pType = levelConfig.patternType;
+        if (pType === 'stepped_fret') {
+          drawSteppedFretPattern(ctx, size, cols, rows);
+        } else if (pType === 'serpent_zigzag') {
+          drawSerpentZigzagPattern(ctx, size, cols, rows);
+        } else if (pType === 'zoomorphic_face') {
+          drawZoomorphicPattern(ctx, size, cols, rows);
+        } else if (pType === 'diamond_spiral') {
+          drawDiamondSpiralPattern(ctx, size, cols, rows);
+        } else {
+          drawMasterCodexPattern(ctx, size, cols, rows);
+        }
+
+        // Líneas sutiles de división entre piezas
+        ctx.strokeStyle = 'rgba(28, 25, 23, 0.28)';
+        ctx.lineWidth = 2;
+        for (let c = 1; c < cols; c++) {
+          ctx.beginPath();
+          ctx.moveTo(c * cw, 0);
+          ctx.lineTo(c * cw, size);
+          ctx.stroke();
+        }
+        for (let r = 1; r < rows; r++) {
+          ctx.beginPath();
+          ctx.moveTo(0, r * ch);
+          ctx.lineTo(size, r * ch);
+          ctx.stroke();
+        }
+
+        return off;
+      }
+
+      function drawSteppedFretPattern(ctx, size, cols, rows) {
+        const cw = size / cols;
+        const ch = size / rows;
+        for (let r = 0; r < rows; r++) {
+          for (let c = 0; c < cols; c++) {
+            const x = c * cw;
+            const y = r * ch;
+            const pad = cw * 0.12;
+
+            ctx.fillStyle = (r + c) % 2 === 0 ? PALETTE.terracotta : PALETTE.manganese;
+            ctx.beginPath();
+            ctx.moveTo(x + pad, y + ch - pad);
+            ctx.lineTo(x + pad, y + pad * 2.4);
+            ctx.lineTo(x + cw * 0.4, y + pad * 2.4);
+            ctx.lineTo(x + cw * 0.4, y + pad * 1.5);
+            ctx.lineTo(x + cw * 0.7, y + pad * 1.5);
+            ctx.lineTo(x + cw * 0.7, y + pad);
+            ctx.lineTo(x + cw - pad, y + pad);
+            ctx.lineTo(x + cw - pad, y + ch - pad);
+            ctx.closePath();
+            ctx.fill();
+
+            ctx.strokeStyle = PALETTE.engobe;
+            ctx.lineWidth = cw * 0.05;
+            ctx.strokeRect(x + cw * 0.46, y + ch * 0.46, cw * 0.32, ch * 0.32);
+
+            ctx.fillStyle = (r + c) % 2 === 0 ? PALETTE.manganese : PALETTE.terracotta;
+            ctx.fillRect(x + cw * 0.57, y + ch * 0.57, cw * 0.11, ch * 0.11);
+          }
+        }
+      }
+
+      function drawSerpentZigzagPattern(ctx, size, cols, rows) {
+        const bandH = size / rows;
+        for (let r = 0; r < rows; r++) {
+          const y0 = r * bandH;
+          ctx.fillStyle = PALETTE.manganese;
+          ctx.fillRect(0, y0 + 10, size, bandH * 0.12);
+          ctx.fillRect(0, y0 + bandH - 10 - bandH * 0.12, size, bandH * 0.12);
+
+          const steps = cols * 2;
+          const stepW = size / steps;
+          ctx.lineWidth = bandH * 0.11;
+          ctx.lineJoin = 'miter';
+
+          ctx.strokeStyle = PALETTE.terracotta;
+          ctx.beginPath();
+          for (let i = 0; i <= steps; i++) {
+            const px = i * stepW;
+            const py = i % 2 === 0 ? y0 + bandH * 0.32 : y0 + bandH * 0.68;
+            if (i === 0) ctx.moveTo(px, py);
+            else ctx.lineTo(px, py);
+          }
+          ctx.stroke();
+
+          for (let i = 0; i < steps; i++) {
+            const cx = (i + 0.5) * stepW;
+            const cy = y0 + bandH * 0.5;
+            ctx.fillStyle = PALETTE.manganese;
+            ctx.beginPath();
+            ctx.arc(cx, cy, bandH * 0.06, 0, Math.PI * 2);
+            ctx.fill();
+          }
+        }
+      }
+
+      function drawZoomorphicPattern(ctx, size, cols, rows) {
+        const cw = size / cols;
+        const ch = size / rows;
+        for (let r = 0; r < rows; r++) {
+          for (let c = 0; c < cols; c++) {
+            const x = c * cw;
+            const y = r * ch;
+
+            ctx.strokeStyle = PALETTE.manganese;
+            ctx.lineWidth = 6;
+            ctx.strokeRect(x + 8, y + 8, cw - 16, ch - 16);
+
+            if (c === 1) {
+              ctx.fillStyle = PALETTE.terracotta;
+              ctx.fillRect(x + 18, y + 18, cw - 36, ch - 36);
+
+              ctx.fillStyle = PALETTE.engobe;
+              ctx.beginPath();
+              ctx.moveTo(x + cw * 0.22, y + ch * 0.42);
+              ctx.lineTo(x + cw * 0.44, y + ch * 0.52);
+              ctx.lineTo(x + cw * 0.22, y + ch * 0.62);
+              ctx.closePath();
+              ctx.fill();
+
+              ctx.beginPath();
+              ctx.moveTo(x + cw * 0.78, y + ch * 0.42);
+              ctx.lineTo(x + cw * 0.56, y + ch * 0.52);
+              ctx.lineTo(x + cw * 0.78, y + ch * 0.62);
+              ctx.closePath();
+              ctx.fill();
+
+              ctx.fillStyle = PALETTE.manganese;
+              ctx.fillRect(x + cw * 0.28, y + ch * 0.48, 10, 10);
+              ctx.fillRect(x + cw * 0.64, y + ch * 0.48, 10, 10);
+            } else {
+              ctx.fillStyle = r === 0 ? PALETTE.manganese : PALETTE.terracotta;
+              for (let k = 0; k < 3; k++) {
+                ctx.fillRect(x + 22 + k * 16, y + 24 + k * 24, cw - 44 - k * 16, 16);
+              }
+            }
+          }
+        }
+      }
+
+      function drawDiamondSpiralPattern(ctx, size, cols, rows) {
+        const cw = size / cols;
+        const ch = size / rows;
+        for (let r = 0; r < rows; r++) {
+          for (let c = 0; c < cols; c++) {
+            const cx = (c + 0.5) * cw;
+            const cy = (r + 0.5) * ch;
+            const rad = Math.min(cw, ch) * 0.42;
+
+            ctx.fillStyle = PALETTE.manganese;
+            ctx.beginPath();
+            ctx.moveTo(cx, cy - rad);
+            ctx.lineTo(cx + rad, cy);
+            ctx.lineTo(cx, cy + rad);
+            ctx.lineTo(cx - rad, cy);
+            ctx.closePath();
+            ctx.fill();
+
+            ctx.fillStyle = PALETTE.engobe;
+            ctx.beginPath();
+            ctx.moveTo(cx, cy - rad * 0.68);
+            ctx.lineTo(cx + rad * 0.68, cy);
+            ctx.lineTo(cx, cy + rad * 0.68);
+            ctx.lineTo(cx - rad * 0.68, cy);
+            ctx.closePath();
+            ctx.fill();
+
+            ctx.fillStyle = PALETTE.terracotta;
+            ctx.beginPath();
+            ctx.moveTo(cx, cy - rad * 0.36);
+            ctx.lineTo(cx + rad * 0.36, cy);
+            ctx.lineTo(cx, cy + rad * 0.36);
+            ctx.lineTo(cx - rad * 0.36, cy);
+            ctx.closePath();
+            ctx.fill();
+
+            ctx.strokeStyle = PALETTE.terracotta;
+            ctx.lineWidth = 5;
+            ctx.strokeRect(c * cw + 6, r * ch + 6, cw - 12, ch - 12);
+          }
+        }
+      }
+
+      function drawMasterCodexPattern(ctx, size, cols, rows) {
+        const cw = size / cols;
+        const ch = size / rows;
+        for (let r = 0; r < rows; r++) {
+          for (let c = 0; c < cols; c++) {
+            const x = c * cw;
+            const y = r * ch;
+            const isAlt = (r + c) % 2 === 0;
+
+            ctx.fillStyle = isAlt ? PALETTE.terracotta : PALETTE.engobe;
+            ctx.fillRect(x + 4, y + 4, cw - 8, ch - 8);
+
+            ctx.strokeStyle = PALETTE.manganese;
+            ctx.lineWidth = 5;
+            ctx.strokeRect(x + 8, y + 8, cw - 16, ch - 16);
+
+            ctx.fillStyle = isAlt ? PALETTE.engobe : PALETTE.manganese;
+            ctx.beginPath();
+            ctx.moveTo(x + 14, y + 14);
+            ctx.lineTo(x + cw - 14, y + 14);
+            ctx.lineTo(x + 14, y + ch - 14);
+            ctx.closePath();
+            ctx.fill();
+
+            ctx.fillStyle = isAlt ? PALETTE.manganese : PALETTE.terracotta;
+            ctx.beginPath();
+            ctx.arc(x + cw * 0.65, y + ch * 0.65, Math.min(cw, ch) * 0.14, 0, Math.PI * 2);
+            ctx.fill();
+          }
+        }
+      }
+
+      // ==========================================
+      // 4. SILUETAS DE VASIJAS
+      // ==========================================
+      function traceVesselSilhouette(ctx, shape, x, y, w, h) {
+        ctx.beginPath();
+        if (shape === 'puco') {
+          ctx.moveTo(x, y + h * 0.12);
+          ctx.lineTo(x + w, y + h * 0.12);
+          ctx.bezierCurveTo(
+            x + w * 1.02, y + h * 0.72,
+            x + w * 0.78, y + h * 0.96,
+            x + w * 0.65, y + h * 0.96
+          );
+          ctx.lineTo(x + w * 0.35, y + h * 0.96);
+          ctx.bezierCurveTo(
+            x + w * 0.22, y + h * 0.96,
+            x - w * 0.02, y + h * 0.72,
+            x, y + h * 0.12
+          );
+        } else if (shape === 'jarro_pato') {
+          ctx.moveTo(x + w * 0.18, y + h * 0.08);
+          ctx.lineTo(x + w * 0.44, y + h * 0.08);
+          ctx.lineTo(x + w * 0.46, y + h * 0.28);
+          ctx.bezierCurveTo(
+            x + w * 0.88, y + h * 0.25,
+            x + w * 0.98, y + h * 0.55,
+            x + w * 0.85, y + h * 0.85
+          );
+          ctx.lineTo(x + w * 0.65, y + h * 0.96);
+          ctx.lineTo(x + w * 0.25, y + h * 0.96);
+          ctx.bezierCurveTo(
+            x + w * 0.02, y + h * 0.78,
+            x + w * 0.05, y + h * 0.42,
+            x + w * 0.18, y + h * 0.28
+          );
+        } else {
+          ctx.moveTo(x + w * 0.15, y + h * 0.04);
+          ctx.lineTo(x + w * 0.85, y + h * 0.04);
+          ctx.lineTo(x + w * 0.74, y + h * 0.24);
+          ctx.bezierCurveTo(
+            x + w * 0.98, y + h * 0.38,
+            x + w * 0.94, y + h * 0.76,
+            x + w * 0.72, y + h * 0.96
+          );
+          ctx.lineTo(x + w * 0.28, y + h * 0.96);
+          ctx.bezierCurveTo(
+            x + w * 0.06, y + h * 0.76,
+            x + w * 0.02, y + h * 0.38,
+            x + w * 0.26, y + h * 0.24
+          );
+        }
+        ctx.closePath();
+      }
+
+      // ==========================================
+      // 5. ESTADO Y MOTOR DEL JUEGO
+      // ==========================================
+      const canvas = document.getElementById('gameCanvas');
+      const ctx = canvas.getContext('2d');
+
+      const hudLevel = document.getElementById('hud-level');
+      const hudScore = document.getElementById('hud-score');
+      const hudPieces = document.getElementById('hud-pieces');
+      const timerBar = document.getElementById('timer-bar');
+      const btnSound = document.getElementById('btn-sound');
+      const btnHint = document.getElementById('btn-hint');
+
+      const startScreen = document.getElementById('start-screen');
+      const victoryScreen = document.getElementById('victory-screen');
+      const gameoverScreen = document.getElementById('gameover-screen');
+
+      const state = {
+        screen: 'start',
+        levelIndex: 0,
+        score: 0,
+        highScore: parseInt(localStorage.getItem('guardian_highscore') || '0', 10),
+        maxUnlocked: parseInt(localStorage.getItem('guardian_maxlevel') || '1', 10),
+        timeLeft: 75,
+        maxTime: 75,
+        lastTimestamp: 0,
+        lastSnapTime: 0,
+        statusMessage: 'Toca un tiesto para girarlo y arrastralo a su hueco',
+        shards: [],
+        particles: [],
+        vesselTexture: null,
+        boardRect: { x: 0, y: 0, w: 300, h: 300 },
+        trayRect: { x: 0, y: 0, w: 300, h: 160 },
+        draggedShard: null,
+        selectedShard: null,
+        pointerDownPos: { x: 0, y: 0 },
+        pointerOffset: { x: 0, y: 0 },
+        hasMovedSignificantly: false
+      };
+
+      document.getElementById('start-highscore').textContent = state.highScore;
+      document.getElementById('start-maxlevel').textContent = state.maxUnlocked;
+
+      function resizeCanvas() {
+        const dpr = Math.min(window.devicePixelRatio || 1, 2);
+        const w = window.innerWidth;
+        const h = window.innerHeight;
+        canvas.width = w * dpr;
+        canvas.height = h * dpr;
+        ctx.setTransform(dpr, 0, 0, dpr, 0, 0);
+
+        const hudTop = 78;
+        const statusBandH = 30;
+        const availH = h - hudTop - statusBandH;
+
+        const trayH = Math.max(145, Math.min(230, availH * 0.35));
+        const boardAreaH = availH - trayH - 14;
+        const vesselDim = Math.max(130, Math.min(w * 0.82, boardAreaH * 0.88, 360));
+
+        state.boardRect = {
+          x: (w - vesselDim) / 2,
+          y: hudTop + statusBandH + (boardAreaH - vesselDim) / 2,
+          w: vesselDim,
+          h: vesselDim
+        };
+
+        state.trayRect = {
+          x: 12,
+          y: h - trayH - 10,
+          w: w - 24,
+          h: trayH
+        };
+
+        repositionShardsOnResize();
+      }
+
+      function repositionShardsOnResize() {
+        if (!state.shards.length) return;
+        const level = LEVELS[state.levelIndex];
+        const cellW = state.boardRect.w / level.cols;
+        const cellH = state.boardRect.h / level.rows;
+
+        const unplaced = state.shards.filter(s => !s.locked);
+        const trayCols = Math.min(unplaced.length, 4);
+        const trayRows = Math.ceil(unplaced.length / Math.max(1, trayCols));
+
+        unplaced.forEach((shard, idx) => {
+          shard.w = cellW;
+          shard.h = cellH;
+          if (shard !== state.draggedShard) {
+            const col = idx % trayCols;
+            const row = Math.floor(idx / trayCols);
+            const slotW = state.trayRect.w / Math.max(1, trayCols);
+            const slotH = (state.trayRect.h - 24) / Math.max(1, trayRows);
+            shard.x = state.trayRect.x + col * slotW + slotW / 2;
+            shard.y = state.trayRect.y + 26 + row * slotH + slotH / 2;
+            shard.homeX = shard.x;
+            shard.homeY = shard.y;
+          }
+        });
+
+        state.shards.filter(s => s.locked).forEach(shard => {
+          shard.w = cellW;
+          shard.h = cellH;
+          shard.x = state.boardRect.x + (shard.col + 0.5) * cellW;
+          shard.y = state.boardRect.y + (shard.row + 0.5) * cellH;
+        });
+      }
+
+      window.addEventListener('resize', resizeCanvas);
+
+      function loadLevel(index) {
+        state.levelIndex = index % LEVELS.length;
+        const level = LEVELS[state.levelIndex];
+        state.timeLeft = level.timeLimit;
+        state.maxTime = level.timeLimit;
+        state.lastSnapTime = performance.now();
+        state.particles = [];
+        state.draggedShard = null;
+        state.selectedShard = null;
+        state.statusMessage = `${level.name}: Toca un tiesto para girarlo ▲ hacia arriba y arrastralo`;
+
+        const texSize = 480;
+        state.vesselTexture = createVesselTexture(level, texSize);
+
+        const shards = [];
+        const srcCellW = texSize / level.cols;
+        const srcCellH = texSize / level.rows;
+
+        for (let r = 0; r < level.rows; r++) {
+          for (let c = 0; c < level.cols; c++) {
+            const initialRot = ((r + c + Math.floor(Math.random() * 3) + 1) % 4) * 90;
+            shards.push({
+              id: `${r}-${c}`,
+              row: r,
+              col: c,
+              sx: c * srcCellW,
+              sy: r * srcCellH,
+              sw: srcCellW,
+              sh: srcCellH,
+              x: 0,
+              y: 0,
+              homeX: 0,
+              homeY: 0,
+              w: 80,
+              h: 80,
+              rotation: initialRot,
+              visualRotation: initialRot,
+              locked: false,
+              snapGlow: 0
+            });
+          }
+        }
+
+        for (let i = shards.length - 1; i > 0; i--) {
+          const j = Math.floor(Math.random() * (i + 1));
+          [shards[i], shards[j]] = [shards[j], shards[i]];
+        }
+
+        state.shards = shards;
+        resizeCanvas();
+        updateHUD();
+      }
+
+      function updateHUD() {
+        hudLevel.textContent = `${state.levelIndex + 1}/${LEVELS.length}`;
+        hudScore.textContent = state.score;
+        const lockedCount = state.shards.filter(s => s.locked).length;
+        hudPieces.textContent = `${lockedCount}/${state.shards.length}`;
+
+        const pct = Math.max(0, Math.min(100, (state.timeLeft / state.maxTime) * 100));
+        timerBar.style.width = `${pct}%`;
+        timerBar.style.background = pct < 25
+          ? '#e03c28'
+          : 'linear-gradient(90deg, #a63822, #f0b34b)';
+      }
+
+      function spawnSnapParticles(x, y) {
+        for (let i = 0; i < 20; i++) {
+          const angle = (Math.PI * 2 * i) / 20 + Math.random() * 0.25;
+          const speed = 45 + Math.random() * 105;
+          state.particles.push({
+            x,
+            y,
+            vx: Math.cos(angle) * speed,
+            vy: Math.sin(angle) * speed,
+            size: 3 + Math.random() * 4,
+            alpha: 1,
+            color: i % 2 === 0 ? PALETTE.gold : '#ff7e57'
+          });
+        }
+      }
+
+      // ==========================================
+      // 6. CONTROLES TÁCTILES Y MOUSE
+      // ==========================================
+      function getCanvasPoint(e) {
+        const rect = canvas.getBoundingClientRect();
+        return {
+          x: e.clientX - rect.left,
+          y: e.clientY - rect.top
+        };
+      }
+
+      function hitTestShard(px, py) {
+        for (let i = state.shards.length - 1; i >= 0; i--) {
+          const s = state.shards[i];
+          if (s.locked) continue;
+          const halfW = s.w * 0.56;
+          const halfH = s.h * 0.56;
+          if (
+            px >= s.x - halfW &&
+            px <= s.x + halfW &&
+            py >= s.y - halfH &&
+            py <= s.y + halfH
+          ) {
+            return s;
+          }
+        }
+        return null;
+      }
+
+      canvas.addEventListener('pointerdown', (e) => {
+        if (state.screen !== 'playing') return;
+        e.preventDefault();
+        sfx.init();
+
+        const pt = getCanvasPoint(e);
+        const hit = hitTestShard(pt.x, pt.y);
+        if (hit) {
+          state.draggedShard = hit;
+          state.selectedShard = hit;
+          state.pointerDownPos = { x: pt.x, y: pt.y };
+          state.pointerOffset = { x: pt.x - hit.x, y: pt.y - hit.y };
+          state.hasMovedSignificantly = false;
+
+          state.shards = state.shards.filter(s => s !== hit);
+          state.shards.push(hit);
+          sfx.playPick();
+        } else {
+          state.selectedShard = null;
+        }
+      });
+
+      canvas.addEventListener('pointermove', (e) => {
+        if (state.screen !== 'playing' || !state.draggedShard) return;
+        e.preventDefault();
+
+        const pt = getCanvasPoint(e);
+        const dx = pt.x - state.pointerDownPos.x;
+        const dy = pt.y - state.pointerDownPos.y;
+        if (Math.hypot(dx, dy) > 8) {
+          state.hasMovedSignificantly = true;
+        }
+
+        state.draggedShard.x = pt.x - state.pointerOffset.x;
+        state.draggedShard.y = pt.y - state.pointerOffset.y;
+      });
+
+      function handlePointerRelease(e) {
+        if (state.screen !== 'playing' || !state.draggedShard) return;
+        e.preventDefault();
+
+        const shard = state.draggedShard;
+        state.draggedShard = null;
+
+        // Toque corto -> Rotar 90°
+        if (!state.hasMovedSignificantly) {
+          shard.rotation = (shard.rotation + 90) % 360;
+          sfx.playRotate();
+          if (shard.rotation % 360 === 0) {
+            state.statusMessage = '¡Bien! La flecha ▲ está arriba. Ahora arrastralo a su hueco';
+          } else {
+            state.statusMessage = 'Tocá de nuevo para que la flecha dorada ▲ apunte hacia arriba';
+          }
+          checkSnap(shard);
+          return;
+        }
+
+        // Soltar tras arrastrar
+        if (!checkSnap(shard)) {
+          const level = LEVELS[state.levelIndex];
+          const cellW = state.boardRect.w / level.cols;
+          const cellH = state.boardRect.h / level.rows;
+          const targetX = state.boardRect.x + (shard.col + 0.5) * cellW;
+          const targetY = state.boardRect.y + (shard.row + 0.5) * cellH;
+          const dist = Math.hypot(shard.x - targetX, shard.y - targetY);
+
+          if (dist <= Math.min(cellW, cellH) * 0.45 && shard.rotation % 360 !== 0) {
+            state.statusMessage = '¡Casi! Está en su lugar pero girado: tocalo para enderezarlo';
+          }
+
+          if (shard.y > state.trayRect.y - 10) {
+            shard.homeX = Math.max(
+              state.trayRect.x + shard.w * 0.42,
+              Math.min(state.trayRect.x + state.trayRect.w - shard.w * 0.42, shard.x)
+            );
+            shard.homeY = Math.max(
+              state.trayRect.y + 28 + shard.h * 0.35,
+              Math.min(state.trayRect.y + state.trayRect.h - shard.h * 0.35, shard.y)
+            );
+          }
+          shard.x = shard.homeX;
+          shard.y = shard.homeY;
+        }
+      }
+
+      canvas.addEventListener('pointerup', handlePointerRelease);
+      canvas.addEventListener('pointercancel', handlePointerRelease);
+
+      function checkSnap(shard) {
+        const level = LEVELS[state.levelIndex];
+        const cellW = state.boardRect.w / level.cols;
+        const cellH = state.boardRect.h / level.rows;
+
+        const targetX = state.boardRect.x + (shard.col + 0.5) * cellW;
+        const targetY = state.boardRect.y + (shard.row + 0.5) * cellH;
+
+        const dist = Math.hypot(shard.x - targetX, shard.y - targetY);
+        const snapTolerance = Math.min(cellW, cellH) * 0.45;
+
+        if (dist <= snapTolerance && shard.rotation % 360 === 0) {
+          shard.x = targetX;
+          shard.y = targetY;
+          shard.locked = true;
+          shard.snapGlow = 1.0;
+          if (state.selectedShard === shard) state.selectedShard = null;
+
+          state.shards = state.shards.filter(s => s !== shard);
+          state.shards.unshift(shard);
+
+          const now = performance.now();
+          const elapsed = (now - state.lastSnapTime) / 1000;
+          state.lastSnapTime = now;
+          const speedBonus = elapsed < 6 ? 50 : 0;
+
+          state.score += 100 + speedBonus;
+          state.timeLeft = Math.min(state.maxTime, state.timeLeft + 4);
+          state.statusMessage = '¡Excelente! Tiesto encajado en la vasija';
+
+          sfx.playSnap();
+          spawnSnapParticles(targetX, targetY);
+          updateHUD();
+
+          if (state.shards.every(s => s.locked)) {
+            setTimeout(completeLevel, 450);
+          }
+          return true;
+        }
+        return false;
+      }
+
+      // Botón de Pista: acomoda y endereza automáticamente una pieza pendiente
+      btnHint.addEventListener('click', () => {
+        if (state.screen !== 'playing') return;
+        sfx.init();
+        const candidate = state.shards.find(s => !s.locked);
+        if (!candidate) return;
+
+        const level = LEVELS[state.levelIndex];
+        const cellW = state.boardRect.w / level.cols;
+        const cellH = state.boardRect.h / level.rows;
+
+        candidate.rotation = 0;
+        candidate.x = state.boardRect.x + (candidate.col + 0.5) * cellW;
+        candidate.y = state.boardRect.y + (candidate.row + 0.5) * cellH;
+        state.score = Math.max(0, state.score - 25);
+        state.statusMessage = 'Pista usada (-25 pts): pieza colocada en su posición';
+        checkSnap(candidate);
+      });
+
+      // ==========================================
+      // 7. VICTORIA Y FIN DE JUEGO
+      // ==========================================
+      function completeLevel() {
+        state.screen = 'victory';
+        sfx.playVictory();
+
+        const level = LEVELS[state.levelIndex];
+        const timeBonus = Math.round(state.timeLeft * 12);
+        state.score += timeBonus;
+
+        if (state.score > state.highScore) {
+          state.highScore = state.score;
+          localStorage.setItem('guardian_highscore', String(state.highScore));
+        }
+        const nextUnlock = Math.min(LEVELS.length, state.levelIndex + 2);
+        if (nextUnlock > state.maxUnlocked) {
+          state.maxUnlocked = nextUnlock;
+          localStorage.setItem('guardian_maxlevel', String(state.maxUnlocked));
+        }
+
+        document.getElementById('vic-vessel-type').textContent = level.name;
+        document.getElementById('vic-title').textContent =
+          state.levelIndex === LEVELS.length - 1
+            ? '¡Completaste Todas las Vasijas!'
+            : '¡Vasija Reconstruida!';
+        document.getElementById('vic-symbol-title').textContent = level.symbolTitle;
+        document.getElementById('vic-symbol-desc').textContent = level.symbolDesc;
+        document.getElementById('vic-time-bonus').textContent = `+${timeBonus}`;
+        document.getElementById('vic-total-score').textContent = state.score;
+
+        document.getElementById('btn-next-level').textContent =
+          state.levelIndex === LEVELS.length - 1 ? 'JUGAR DE NUEVO' : 'SIGUIENTE NIVEL';
+
+        renderMiniVesselPreview(level);
+        victoryScreen.classList.remove('hidden');
+      }
+
+      function renderMiniVesselPreview(level) {
+        const mini = document.getElementById('mini-preview-canvas');
+        const mctx = mini.getContext('2d');
+        mctx.clearRect(0, 0, mini.width, mini.height);
+
+        mctx.save();
+        traceVesselSilhouette(mctx, level.vesselShape, 14, 14, 112, 112);
+        mctx.clip();
+        mctx.drawImage(state.vesselTexture, 14, 14, 112, 112);
+        mctx.restore();
+
+        mctx.save();
+        traceVesselSilhouette(mctx, level.vesselShape, 14, 14, 112, 112);
+        mctx.strokeStyle = PALETTE.gold;
+        mctx.lineWidth = 3;
+        mctx.stroke();
+        mctx.restore();
+      }
+
+      function triggerGameOver() {
+        state.screen = 'gameover';
+        sfx.playGameOver();
+        if (state.score > state.highScore) {
+          state.highScore = state.score;
+          localStorage.setItem('guardian_highscore', String(state.highScore));
+        }
+        document.getElementById('go-score').textContent = state.score;
+        document.getElementById('go-highscore').textContent = state.highScore;
+        gameoverScreen.classList.remove('hidden');
+      }
+
+      // ==========================================
+      // 8. DIBUJO EN CANVAS
+      // ==========================================
+      function drawBackground(w, h) {
+        const grad = ctx.createRadialGradient(w * 0.5, h * 0.4, 25, w * 0.5, h * 0.5, Math.max(w, h) * 0.75);
+        grad.addColorStop(0, '#36261d');
+        grad.addColorStop(1, '#16100c');
+        ctx.fillStyle = grad;
+        ctx.fillRect(0, 0, w, h);
+
+        // Barra de ayuda / instrucción en vivo
+        const msgY = 86;
+        ctx.fillStyle = 'rgba(240, 179, 75, 0.14)';
+        ctx.beginPath();
+        ctx.roundRect(12, msgY, w - 24, 26, 8);
+        ctx.fill();
+
+        ctx.fillStyle = PALETTE.gold;
+        ctx.font = '700 12px sans-serif';
+        ctx.textAlign = 'center';
+        ctx.textBaseline = 'middle';
+        ctx.fillText(state.statusMessage, w / 2, msgY + 13);
+
+        // Mesa de excavación
+        const b = state.boardRect;
+        ctx.fillStyle = 'rgba(18, 13, 10, 0.65)';
+        ctx.beginPath();
+        ctx.roundRect(b.x - 12, b.y - 12, b.w + 24, b.h + 24, 16);
+        ctx.fill();
+        ctx.strokeStyle = '#5e4432';
+        ctx.lineWidth = 2;
+        ctx.stroke();
+
+        // Bandeja inferior de tiestos
+        const t = state.trayRect;
+        ctx.fillStyle = 'rgba(42, 30, 23, 0.94)';
+        ctx.beginPath();
+        ctx.roundRect(t.x, t.y, t.w, t.h, 16);
+        ctx.fill();
+        ctx.strokeStyle = '#75543d';
+        ctx.lineWidth = 2;
+        ctx.stroke();
+
+        ctx.fillStyle = '#e5d3b7';
+        ctx.font = '700 12px sans-serif';
+        ctx.textAlign = 'center';
+        ctx.fillText('TIESTOS — TOCA PARA GIRAR ▲ • ARRASTRA PARA COLOCAR', t.x + t.w / 2, t.y + 15);
+      }
+
+      function drawVesselTarget() {
+        const level = LEVELS[state.levelIndex];
+        const b = state.boardRect;
+        const cw = b.w / level.cols;
+        const ch = b.h / level.rows;
+
+        ctx.save();
+        traceVesselSilhouette(ctx, level.vesselShape, b.x, b.y, b.w, b.h);
+        ctx.fillStyle = 'rgba(245, 236, 218, 0.08)';
+        ctx.fill();
+        ctx.strokeStyle = 'rgba(240, 179, 75, 0.65)';
+        ctx.lineWidth = 3;
+        ctx.setLineDash([8, 6]);
+        ctx.stroke();
+        ctx.restore();
+
+        // Resaltar el hueco correspondiente a la pieza activa/arrastrada
+        const active = state.draggedShard || state.selectedShard;
+        ctx.save();
+        traceVesselSilhouette(ctx, level.vesselShape, b.x, b.y, b.w, b.h);
+        ctx.clip();
+
+        if (active && !active.locked) {
+          const hx = b.x + active.col * cw;
+          const hy = b.y + active.row * ch;
+          ctx.fillStyle = active.rotation % 360 === 0
+            ? 'rgba(70, 184, 116, 0.28)'
+            : 'rgba(240, 179, 75, 0.24)';
+          ctx.fillRect(hx, hy, cw, ch);
+          ctx.strokeStyle = active.rotation % 360 === 0 ? PALETTE.ok : PALETTE.gold;
+          ctx.lineWidth = 3;
+          ctx.strokeRect(hx + 2, hy + 2, cw - 4, ch - 4);
+        }
+
+        ctx.strokeStyle = 'rgba(240, 179, 75, 0.28)';
+        ctx.lineWidth = 1.5;
+        for (let c = 1; c < level.cols; c++) {
+          ctx.beginPath();
+          ctx.moveTo(b.x + c * cw, b.y);
+          ctx.lineTo(b.x + c * cw, b.y + b.h);
+          ctx.stroke();
+        }
+        for (let r = 1; r < level.rows; r++) {
+          ctx.beginPath();
+          ctx.moveTo(b.x, b.y + r * ch);
+          ctx.lineTo(b.x + b.w, b.y + r * ch);
+          ctx.stroke();
+        }
+        ctx.restore();
+      }
+
+      function drawShard(shard) {
+        const level = LEVELS[state.levelIndex];
+        const b = state.boardRect;
+        const isDragged = shard === state.draggedShard;
+        const isSelected = shard === state.selectedShard && !shard.locked;
+        const isAligned = shard.rotation % 360 === 0;
+        const scale = isDragged ? 1.08 : 1.0;
+
+        ctx.save();
+
+        if (shard.locked) {
+          traceVesselSilhouette(ctx, level.vesselShape, b.x, b.y, b.w, b.h);
+          ctx.clip();
+        }
+
+        ctx.translate(shard.x, shard.y);
+        ctx.rotate((shard.visualRotation * Math.PI) / 180);
+        ctx.scale(scale, scale);
+
+        if (!shard.locked) {
+          ctx.shadowColor = 'rgba(0, 0, 0, 0.65)';
+          ctx.shadowBlur = isDragged ? 18 : 8;
+          ctx.shadowOffsetY = isDragged ? 10 : 4;
+        }
+
+        const drawW = shard.w * (shard.locked ? 1.005 : 0.84);
+        const drawH = shard.h * (shard.locked ? 1.005 : 0.84);
+
+        ctx.drawImage(
+          state.vesselTexture,
+          shard.sx,
+          shard.sy,
+          shard.sw,
+          shard.sh,
+          -drawW / 2,
+          -drawH / 2,
+          drawW,
+          drawH
+        );
+
+        ctx.shadowColor = 'transparent';
+
+        if (!shard.locked) {
+          // Borde claro para distinguir cada tiesto
+          ctx.strokeStyle = isDragged || isSelected
+            ? PALETTE.gold
+            : isAligned
+              ? PALETTE.ok
+              : '#3b281c';
+          ctx.lineWidth = isDragged || isSelected ? 3.5 : 2.5;
+          ctx.strokeRect(-drawW / 2, -drawH / 2, drawW, drawH);
+
+          // Flecha indicadora de "arriba" (0°) en el borde superior del tiesto
+          const arrowY = -drawH / 2 + 11;
+          ctx.fillStyle = isAligned ? PALETTE.ok : PALETTE.gold;
+          ctx.beginPath();
+          ctx.moveTo(0, arrowY - 6);
+          ctx.lineTo(7, arrowY + 4);
+          ctx.lineTo(-7, arrowY + 4);
+          ctx.closePath();
+          ctx.fill();
+        } else if (shard.snapGlow > 0) {
+          ctx.fillStyle = `rgba(240, 179, 75, ${shard.snapGlow * 0.45})`;
+          ctx.fillRect(-drawW / 2, -drawH / 2, drawW, drawH);
+        }
+
+        ctx.restore();
+      }
+
+      function drawParticles() {
+        state.particles.forEach(p => {
+          ctx.save();
+          ctx.globalAlpha = Math.max(0, p.alpha);
+          ctx.fillStyle = p.color;
+          ctx.beginPath();
+          ctx.arc(p.x, p.y, p.size, 0, Math.PI * 2);
+          ctx.fill();
+          ctx.restore();
+        });
+      }
+
+      // ==========================================
+      // 9. BUCLE PRINCIPAL
+      // ==========================================
+      function gameLoop(timestamp) {
+        if (!state.lastTimestamp) state.lastTimestamp = timestamp;
+        const dt = Math.min(0.1, (timestamp - state.lastTimestamp) / 1000);
+        state.lastTimestamp = timestamp;
+
+        const w = window.innerWidth;
+        const h = window.innerHeight;
+
+        if (state.screen === 'playing') {
+          state.timeLeft -= dt;
+          if (state.timeLeft <= 0) {
+            state.timeLeft = 0;
+            updateHUD();
+            triggerGameOver();
+          } else {
+            updateHUD();
+          }
+        }
+
+        state.shards.forEach(s => {
+          let diff = s.rotation - s.visualRotation;
+          if (diff < -180) diff += 360;
+          if (diff > 180) diff -= 360;
+          if (Math.abs(diff) > 0.5) {
+            s.visualRotation += diff * Math.min(1, dt * 18);
+          } else {
+            s.visualRotation = s.rotation;
+          }
+
+          if (s.snapGlow > 0) {
+            s.snapGlow = Math.max(0, s.snapGlow - dt * 1.8);
+          }
+        });
+
+        for (let i = state.particles.length - 1; i >= 0; i--) {
+          const p = state.particles[i];
+          p.x += p.vx * dt;
+          p.y += p.vy * dt;
+          p.alpha -= dt * 1.6;
+          if (p.alpha <= 0) state.particles.splice(i, 1);
+        }
+
+        drawBackground(w, h);
+        if (state.vesselTexture) {
+          drawVesselTarget();
+          state.shards.forEach(drawShard);
+
+          const level = LEVELS[state.levelIndex];
+          const b = state.boardRect;
+          ctx.save();
+          traceVesselSilhouette(ctx, level.vesselShape, b.x, b.y, b.w, b.h);
+          ctx.strokeStyle = PALETTE.gold;
+          ctx.lineWidth = 3;
+          ctx.stroke();
+          ctx.restore();
+        }
+        drawParticles();
+
+        requestAnimationFrame(gameLoop);
+      }
+
+      // ==========================================
+      // 10. BOTONES DE INTERFAZ
+      // ==========================================
+      document.getElementById('btn-start').addEventListener('click', () => {
+        sfx.init();
+        startScreen.classList.add('hidden');
+        state.score = 0;
+        state.screen = 'playing';
+        loadLevel(0);
+      });
+
+      document.getElementById('btn-next-level').addEventListener('click', () => {
+        sfx.init();
+        victoryScreen.classList.add('hidden');
+        if (state.levelIndex === LEVELS.length - 1) {
+          state.score = 0;
+          loadLevel(0);
+        } else {
+          loadLevel(state.levelIndex + 1);
+        }
+        state.screen = 'playing';
+      });
+
+      document.getElementById('btn-retry').addEventListener('click', () => {
+        sfx.init();
+        gameoverScreen.classList.add('hidden');
+        state.score = Math.max(0, state.score - 100);
+        loadLevel(state.levelIndex);
+        state.screen = 'playing';
+      });
+
+      btnSound.addEventListener('click', () => {
+        sfx.enabled = !sfx.enabled;
+        btnSound.textContent = sfx.enabled ? '🔊' : '🔇';
+        if (sfx.enabled) sfx.playRotate();
+      });
+
+      resizeCanvas();
+      requestAnimationFrame(gameLoop);
+    })();
+  </script>
+</body>
+</html>
